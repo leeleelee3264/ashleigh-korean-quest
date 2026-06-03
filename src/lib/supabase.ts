@@ -10,7 +10,10 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase = createClient(url ?? "http://localhost", anonKey ?? "public-anon-key", {
+// Use `||` (not `??`) so an empty-string env var (e.g. an unset GitHub secret
+// expands to "") also falls back to a dummy client instead of throwing
+// "supabaseUrl is required". When keys are missing the app runs in demo mode.
+export const supabase = createClient(url || "http://localhost", anonKey || "public-anon-key", {
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
