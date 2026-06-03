@@ -1,6 +1,6 @@
 // Demo / "master" mode: bypass Supabase entirely.
 // Role is per-tab (sessionStorage), submissions are shared (localStorage).
-// So you can open one tab as Ashley, another as Sungmin, and watch them sync.
+// So you can open one tab as Ashleigh, another as Sungmin, and watch them sync.
 
 import type { Profile, Submission } from "../types";
 
@@ -34,9 +34,9 @@ export function demoProfile(): Profile | null {
   if (role === "student") {
     return {
       id: "demo-ashley",
-      display_name: "Ashley",
+      display_name: "Ashleigh",
       role: "student",
-      avatar_emoji: "🦊",
+      avatar_emoji: "🐱",
     };
   }
   if (role === "checker") {
@@ -44,7 +44,7 @@ export function demoProfile(): Profile | null {
       id: "demo-sungmin",
       display_name: "Sungmin",
       role: "checker",
-      avatar_emoji: "🐻",
+      avatar_emoji: "🐶",
     };
   }
   return null;

@@ -1,4 +1,4 @@
--- Ashley's Korean Quest - Supabase schema
+-- Ashleigh's Korean Study Quest - Supabase schema
 -- Run this in Supabase Dashboard → SQL Editor.
 
 -- ── profiles ──────────────────────────────────────────────
@@ -28,7 +28,7 @@ create table if not exists public.submissions (
   note text,
   submitted_at timestamptz default now(),
 
-  status text not null default 'pending' check (status in ('pending', 'approved', 'needs_redo')),
+  status text not null default 'pending' check (status in ('pending', 'approved')),
   stamp text,
   checker_comment text,
   reviewed_at timestamptz,
@@ -100,5 +100,5 @@ $$;
 --
 -- insert into public.profiles (id, display_name, role, avatar_emoji)
 -- values
---   ('<ASHLEY_UUID>', 'Ashley', 'student', '🦊'),
---   ('<SUNGMIN_UUID>', 'Sungmin', 'checker', '🐻');
+--   ('<ASHLEIGH_UUID>', 'Ashleigh', 'student', '🐱'),
+--   ('<SUNGMIN_UUID>', 'Sungmin', 'checker', '🐶');

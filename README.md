@@ -1,6 +1,6 @@
-# Ashley's Korean Quest 🗝️
+# Ashleigh's Korean Study Quest 🗝️
 
-A tiny accountability site for Ashley (student) + Sungmin (checker) to track weekly
+A tiny accountability site for Ashleigh (student) + Sungmin (checker) to track weekly
 TOPIK study on [MasterTopik course 49](https://www.mastertopik.com/courses/49).
 
 - Submit screenshot proof of each watched lesson
@@ -22,7 +22,7 @@ policies for the two roles.
 
 ### 3. Create the two accounts
 Dashboard → **Authentication → Users → Add user** → repeat twice:
-- Ashley: any email + a password you'll share with her
+- Ashleigh: any email + a password you'll share with her
 - Sungmin (you): your email + a password
 
 For each user, copy the UUID shown in the users list. Then back in the SQL editor:
@@ -30,8 +30,8 @@ For each user, copy the UUID shown in the users list. Then back in the SQL edito
 ```sql
 insert into public.profiles (id, display_name, role, avatar_emoji)
 values
-  ('<ASHLEY_UUID>',  'Ashley',  'student', '🦊'),
-  ('<SUNGMIN_UUID>', 'Sungmin', 'checker', '🐻');
+  ('<ASHLEIGH_UUID>',  'Ashleigh',  'student', '🐱'),
+  ('<SUNGMIN_UUID>', 'Sungmin', 'checker', '🐶');
 ```
 
 ### 4. Wire env vars
@@ -72,7 +72,7 @@ src/
 ├── components/
 │   ├── Login.tsx               # email/password sign-in
 │   ├── Dashboard.tsx           # progress bar, streak, stamp wall, quest log
-│   ├── SubmitForm.tsx          # Ashley submits a new quest
+│   ├── SubmitForm.tsx          # Ashleigh submits a new quest
 │   ├── QuestCard.tsx           # one submission, with checker controls
 │   └── ScreenshotImage.tsx     # signed-URL <img>
 ├── types.ts                    # shared types + WEEKLY_GOAL constant

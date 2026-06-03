@@ -6,7 +6,6 @@ import { compressImageToDataUrl, demoInsert, isDemo } from "../lib/demo";
 
 export function SubmitForm({ student }: { student: Profile }) {
   const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -31,7 +30,7 @@ export function SubmitForm({ student }: { student: Profile }) {
           student_id: student.id,
           week_start: weekStart,
           lesson_title: title.trim(),
-          lesson_url: url.trim() || null,
+          lesson_url: null,
           screenshot_path: dataUrl,
           note: note.trim() || null,
           submitted_at: new Date().toISOString(),
@@ -57,7 +56,7 @@ export function SubmitForm({ student }: { student: Profile }) {
         student_id: student.id,
         week_start: weekStart,
         lesson_title: title.trim(),
-        lesson_url: url.trim() || null,
+        lesson_url: null,
         screenshot_path: path,
         note: note.trim() || null,
       });
@@ -78,7 +77,6 @@ export function SubmitForm({ student }: { student: Profile }) {
   function finish() {
     setBusy(false);
     setTitle("");
-    setUrl("");
     setNote("");
     setFile(null);
     setDone(true);
@@ -111,17 +109,6 @@ export function SubmitForm({ student }: { student: Profile }) {
       </label>
 
       <label className="block">
-        <span className="text-xs font-pixel">Lesson URL (optional)</span>
-        <input
-          className="pixel-input w-full mt-1"
-          placeholder="https://www.mastertopik.com/..."
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          type="url"
-        />
-      </label>
-
-      <label className="block">
         <span className="text-xs font-pixel">Screenshot proof</span>
         <input
           className="pixel-input w-full mt-1 file:mr-3 file:rounded file:border-0 file:bg-quest-mint file:px-2 file:py-1"
@@ -136,11 +123,11 @@ export function SubmitForm({ student }: { student: Profile }) {
       </label>
 
       <label className="block">
-        <span className="text-xs font-pixel">Note to checker (optional)</span>
+        <span className="text-xs font-pixel">What I learnt</span>
         <textarea
           className="pixel-input w-full mt-1"
           rows={2}
-          placeholder="That grammar rule was tricky…"
+          placeholder="새로 배운 단어, 문법, 표현…"
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />

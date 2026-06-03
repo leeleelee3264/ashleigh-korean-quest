@@ -7,7 +7,7 @@ export type Profile = {
   avatar_emoji: string | null;
 };
 
-export type SubmissionStatus = "pending" | "approved" | "needs_redo";
+export type SubmissionStatus = "pending" | "approved";
 
 export type Submission = {
   id: string;
@@ -24,9 +24,6 @@ export type Submission = {
   reviewed_at: string | null;
   reviewed_by: string | null;
 };
-
-export const STAMPS = ["🔥", "💯", "🌟", "👍", "🏆", "💖"] as const;
-export type Stamp = (typeof STAMPS)[number];
 
 export const WEEKLY_GOAL = 2;
 export const MASTERTOPIK_URL = "https://www.mastertopik.com/courses/49";

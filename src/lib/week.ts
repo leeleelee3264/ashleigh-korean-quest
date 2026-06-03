@@ -30,27 +30,12 @@ export function formatRange(start: Date, end: Date): string {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-// Streak: number of consecutive past weeks (including this one)
-// where the student met WEEKLY_GOAL approved submissions.
-export function calcStreak(weekStartsApproved: string[], weeklyGoal: number): number {
-  const counts = new Map<string, number>();
-  for (const w of weekStartsApproved) counts.set(w, (counts.get(w) ?? 0) + 1);
+// Whether an ISO date (YYYY-MM-DD) falls in the same calendar month as `ref`.
+export function sameMonth(iso: string, ref: Date = new Date()): boolean {
+  const [y, m] = iso.split("-").map(Number);
+  return y === ref.getFullYear() && m === ref.getMonth() + 1;
+}
 
-  let streak = 0;
-  const cursor = startOfWeek();
-  while (true) {
-    const key = toISODate(cursor);
-    if ((counts.get(key) ?? 0) >= weeklyGoal) {
-      streak += 1;
-      cursor.setDate(cursor.getDate() - 7);
-    } else {
-      // Allow current week to be in progress without breaking streak.
-      if (streak === 0 && key === toISODate(startOfWeek())) {
-        cursor.setDate(cursor.getDate() - 7);
-        continue;
-      }
-      break;
-    }
-  }
-  return streak;
+export function monthLabel(ref: Date = new Date()): string {
+  return ref.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
