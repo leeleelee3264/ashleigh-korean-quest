@@ -1,14 +1,25 @@
-// Demo / "master" mode: bypass Supabase entirely.
-// Role is per-tab (sessionStorage), submissions are shared (localStorage).
-// So you can open one tab as Ashleigh, another as Sungmin, and watch them sync.
+// Role + local storage helpers.
+//
+// - The picked role (student/checker) lives in sessionStorage, used in BOTH
+//   modes: demo (no Supabase) and the shared-account Supabase login (B1).
+// - "demo mode" = no Supabase keys configured → submissions are kept in
+//   localStorage so the app is fully usable offline. With keys configured the
+//   hooks talk to Supabase instead.
 
-import type { Profile, Submission } from "../types";
+import type { Profile, Role, Submission } from "../types";
+import { ROLE_PROFILES } from "../types";
+import { hasSupabaseConfig } from "./supabase";
 
-const ROLE_KEY = "demo.role";
+const ROLE_KEY = "quest.role";
 const SUBS_KEY = "demo.submissions.v1";
 const EVT = "demo:submissions";
 
-export function getDemoRole(): "student" | "checker" | null {
+// True when there are no Supabase keys → use localStorage as the backend.
+export function isDemo(): boolean {
+  return !hasSupabaseConfig;
+}
+
+export function getRole(): Role | null {
   try {
     const v = sessionStorage.getItem(ROLE_KEY);
     return v === "student" || v === "checker" ? v : null;
@@ -17,37 +28,17 @@ export function getDemoRole(): "student" | "checker" | null {
   }
 }
 
-export function isDemo(): boolean {
-  return getDemoRole() !== null;
-}
-
-export function enterDemo(role: "student" | "checker") {
+export function setRole(role: Role) {
   sessionStorage.setItem(ROLE_KEY, role);
 }
 
-export function exitDemo() {
+export function clearRole() {
   sessionStorage.removeItem(ROLE_KEY);
 }
 
-export function demoProfile(): Profile | null {
-  const role = getDemoRole();
-  if (role === "student") {
-    return {
-      id: "demo-ashley",
-      display_name: "Ashleigh",
-      role: "student",
-      avatar_emoji: "🐱",
-    };
-  }
-  if (role === "checker") {
-    return {
-      id: "demo-sungmin",
-      display_name: "Sungmin",
-      role: "checker",
-      avatar_emoji: "🐶",
-    };
-  }
-  return null;
+export function profileForRole(): Profile | null {
+  const role = getRole();
+  return role ? ROLE_PROFILES[role] : null;
 }
 
 export function demoListSubmissions(): Submission[] {

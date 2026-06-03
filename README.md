@@ -17,22 +17,18 @@ Go to <https://supabase.com> → New project (free tier is fine). Wait for it to
 In Supabase Dashboard → **SQL Editor** → paste the contents of
 [`supabase/schema.sql`](supabase/schema.sql) → Run.
 
-This creates: `profiles`, `submissions`, the `screenshots` storage bucket, and RLS
-policies for the two roles.
+This creates: `submissions`, the `screenshots` storage bucket, and RLS policies
+that allow only authenticated requests.
 
-### 3. Create the two accounts
-Dashboard → **Authentication → Users → Add user** → repeat twice:
-- Ashleigh: any email + a password you'll share with her
-- Sungmin (you): your email + a password
+### 3. Create ONE shared account
+Both people log in with the **same** account; the role (Ashleigh / Sungmin) is
+chosen by which button you tap in the app.
 
-For each user, copy the UUID shown in the users list. Then back in the SQL editor:
+Dashboard → **Authentication → Users → Add user** → create a single account:
+- e.g. `quest@quest.app` + a password you'll share with Ashleigh
+- turn off "Confirm email" if you used a placeholder email
 
-```sql
-insert into public.profiles (id, display_name, role, avatar_emoji)
-values
-  ('<ASHLEIGH_UUID>',  'Ashleigh',  'student', '🐱'),
-  ('<SUNGMIN_UUID>', 'Sungmin', 'checker', '🐶');
-```
+Then put that email in `src/components/Login.tsx` → `SHARED_EMAIL`.
 
 ### 4. Wire env vars
 Dashboard → **Project settings → API** → copy *Project URL* and *anon public* key.

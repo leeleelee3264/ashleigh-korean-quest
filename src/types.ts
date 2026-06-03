@@ -27,3 +27,11 @@ export type Submission = {
 
 export const WEEKLY_GOAL = 2;
 export const MASTERTOPIK_URL = "https://www.mastertopik.com/courses/49";
+
+// The two roles share one Supabase account (B1 model); the role is chosen by
+// which button you tap at login and kept in sessionStorage. These profiles are
+// synthesized from that choice — there is no per-person account or profiles row.
+export const ROLE_PROFILES: Record<Role, Profile> = {
+  student: { id: "ashleigh", display_name: "Ashleigh", role: "student", avatar_emoji: "🐱" },
+  checker: { id: "sungmin", display_name: "Sungmin", role: "checker", avatar_emoji: "🐶" },
+};

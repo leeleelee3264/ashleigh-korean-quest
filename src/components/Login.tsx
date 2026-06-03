@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
-import { enterDemo } from "../lib/demo";
+import { setRole, clearRole } from "../lib/demo";
 
-// Account emails are baked in so users only type a password.
-// These are NOT secret (they ship in the bundle) — security rests on the
-// password (verified by Supabase) + RLS, not on hiding the email.
-// ⚠️ Replace with the two emails you register in Supabase → Authentication → Users.
-const ACCOUNTS = {
-  student: { email: "ashleigh@quest.app", emoji: "🐱", label: "Ashleigh" },
-  checker: { email: "sungmin@quest.app", emoji: "🐶", label: "Sungmin" },
-} as const;
+// B1 model: ONE shared Supabase account. Both people log in with the same
+// email + password; the role is chosen by which button you tap.
+// The email is not secret (it ships in the bundle) — security rests on the
+// password (verified by Supabase) + RLS.
+// ⚠️ Replace with the email of the single account you create in Supabase.
+const SHARED_EMAIL = "quest@quest.app";
 
-// Used only for the offline demo gate (when Supabase isn't configured).
+// Only used for the offline demo gate (when Supabase isn't configured).
 const GATE_PASSWORD = import.meta.env.VITE_GATE_PASSWORD as string | undefined;
 
 export function Login() {
@@ -27,29 +25,37 @@ export function Login() {
       return;
     }
 
-    // Real Supabase auth (email baked in, user types only the password).
+    // Remember which side we're playing as (used in both modes).
+    setRole(role);
+
+    // Real Supabase auth: one shared account, password verified server-side.
     if (hasSupabaseConfig) {
       setBusy(true);
       const { error } = await supabase.auth.signInWithPassword({
-        email: ACCOUNTS[role].email,
+        email: SHARED_EMAIL,
         password: pw,
       });
       setBusy(false);
-      if (error) setErr("Wrong password 🙈");
-      // on success, useAuth's onAuthStateChange takes over
+      if (error) {
+        clearRole();
+        setErr("Wrong password 🙈");
+        return;
+      }
+      window.location.reload();
       return;
     }
 
     // Offline demo fallback: gate by VITE_GATE_PASSWORD.
     if (!GATE_PASSWORD) {
+      clearRole();
       setErr("Password is not configured. Set VITE_GATE_PASSWORD in .env");
       return;
     }
     if (pw !== GATE_PASSWORD) {
+      clearRole();
       setErr("Wrong password 🙈");
       return;
     }
-    enterDemo(role);
     window.location.reload();
   }
 
