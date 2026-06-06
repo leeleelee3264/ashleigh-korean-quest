@@ -8,7 +8,7 @@ import { QuestCard } from "./QuestCard";
 import { QuestCalendar } from "./QuestCalendar";
 
 export function Dashboard({ viewer, signOut }: { viewer: Profile; signOut: () => void }) {
-  const { submissions, loading } = useSubmissions();
+  const { submissions, loading, reload } = useSubmissions();
   const [showArchive, setShowArchive] = useState(false);
 
   const weekStart = startOfWeek();
@@ -36,7 +36,7 @@ export function Dashboard({ viewer, signOut }: { viewer: Profile; signOut: () =>
           <p className="text-sm text-quest-ink/60 pixel-card">No older quests yet.</p>
         )}
         {archiveGroups.map((g) => (
-          <WeekGroup key={g.weekStart} group={g} viewer={viewer} defaultOpen={false} />
+          <WeekGroup key={g.weekStart} group={g} viewer={viewer} defaultOpen={false} onChanged={reload} />
         ))}
       </div>
     );
@@ -84,7 +84,7 @@ export function Dashboard({ viewer, signOut }: { viewer: Profile; signOut: () =>
 
       <QuestCalendar submissions={submissions} />
 
-      {viewer.role === "student" && <SubmitForm student={viewer} />}
+      {viewer.role === "student" && <SubmitForm student={viewer} onSubmitted={reload} />}
 
       {viewer.role === "checker" && pendingForChecker.length > 0 && (
         <section className="space-y-3">
@@ -92,7 +92,7 @@ export function Dashboard({ viewer, signOut }: { viewer: Profile; signOut: () =>
             🛎️ To approve ({pendingForChecker.length})
           </h2>
           {pendingForChecker.map((s) => (
-            <QuestCard key={s.id} submission={s} viewer={viewer} />
+            <QuestCard key={s.id} submission={s} viewer={viewer} onChanged={reload} />
           ))}
         </section>
       )}
@@ -112,17 +112,16 @@ export function Dashboard({ viewer, signOut }: { viewer: Profile; signOut: () =>
             group={g}
             viewer={viewer}
             defaultOpen={g.weekStart === weekStartISO}
+            onChanged={reload}
           />
         ))}
 
-        {archiveGroups.length > 0 && (
-          <button
-            onClick={() => setShowArchive(true)}
-            className="pixel-btn w-full bg-white text-xs"
-          >
-            📦 See past quests →
-          </button>
-        )}
+        <button
+          onClick={() => setShowArchive(true)}
+          className="pixel-btn w-full bg-white text-xs"
+        >
+          📦 See past quests →
+        </button>
       </section>
     </div>
   );
@@ -148,10 +147,12 @@ function WeekGroup({
   group,
   viewer,
   defaultOpen,
+  onChanged,
 }: {
   group: WeekGroupData;
   viewer: Profile;
   defaultOpen: boolean;
+  onChanged?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -180,7 +181,7 @@ function WeekGroup({
       {open && (
         <div className="p-4 pt-0 space-y-3 border-t-2 border-quest-shadow">
           {group.submissions.map((s) => (
-            <QuestCard key={s.id} submission={s} viewer={viewer} />
+            <QuestCard key={s.id} submission={s} viewer={viewer} onChanged={onChanged} />
           ))}
         </div>
       )}

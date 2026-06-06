@@ -17,13 +17,16 @@ const STATUS_LABEL: Record<Submission["status"], string> = {
 export function QuestCard({
   submission,
   viewer,
+  onChanged,
 }: {
   submission: Submission;
   viewer: Profile;
+  onChanged?: () => void;
 }) {
   const [expanded, setExpanded] = useState(submission.status === "pending");
   const [comment, setComment] = useState(submission.checker_comment ?? "");
   const [busy, setBusy] = useState(false);
+  const [justApproved, setJustApproved] = useState(false);
 
   const isChecker = viewer.role === "checker";
   const canReview = isChecker && submission.status === "pending";
@@ -40,6 +43,8 @@ export function QuestCard({
     if (isDemo()) {
       demoUpdate(submission.id, patch);
       setBusy(false);
+      setJustApproved(true);
+      onChanged?.();
       return;
     }
 
@@ -50,7 +55,10 @@ export function QuestCard({
     setBusy(false);
     if (error) {
       alert(error.message);
+      return;
     }
+    setJustApproved(true);
+    onChanged?.();
   }
 
   return (
@@ -64,6 +72,10 @@ export function QuestCard({
         </div>
         <span className="chip bg-white shrink-0">{STATUS_LABEL[submission.status]}</span>
       </header>
+
+      {justApproved && (
+        <p className="text-sm text-green-700 font-semibold mt-2">✅ Approved! 도장 쾅 🎉</p>
+      )}
 
       {submission.note && (
         <p className="text-sm text-quest-ink/80 mt-2 truncate" title={submission.note}>

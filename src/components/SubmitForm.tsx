@@ -4,7 +4,7 @@ import { MASTERTOPIK_URL, type Profile } from "../types";
 import { startOfWeek, toISODate } from "../lib/week";
 import { compressImageToBlob, compressImageToDataUrl, demoInsert, isDemo } from "../lib/demo";
 
-export function SubmitForm({ student }: { student: Profile }) {
+export function SubmitForm({ student, onSubmitted }: { student: Profile; onSubmitted?: () => void }) {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -80,6 +80,7 @@ export function SubmitForm({ student }: { student: Profile }) {
     setFile(null);
     setDone(true);
     setTimeout(() => setDone(false), 2500);
+    onSubmitted?.();
   }
 
   return (
