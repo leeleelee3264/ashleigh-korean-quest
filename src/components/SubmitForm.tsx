@@ -56,7 +56,6 @@ export function SubmitForm({ student }: { student: Profile }) {
         student_id: student.id,
         week_start: weekStart,
         lesson_title: title.trim(),
-        lesson_url: null,
         screenshot_path: path,
         note: note.trim() || null,
       });
