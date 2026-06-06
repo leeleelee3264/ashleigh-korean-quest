@@ -85,13 +85,8 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-// Shrink + re-encode as JPEG so screenshots fit in localStorage (~5 MB total quota).
-// Target ≲ 250 KB per submission so you can keep dozens before hitting the cap.
-export async function compressImageToDataUrl(
-  file: File,
-  maxDim = 1024,
-  quality = 0.7
-): Promise<string> {
+// Shrink + re-encode a screenshot onto a canvas (shared by both encoders below).
+async function compressToCanvas(file: File, maxDim: number): Promise<HTMLCanvasElement> {
   const objectUrl = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -109,8 +104,35 @@ export async function compressImageToDataUrl(
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("canvas 2d unavailable");
     ctx.drawImage(img, 0, 0, w, h);
-    return canvas.toDataURL("image/jpeg", quality);
+    return canvas;
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+// Demo mode: data URL to stash in localStorage (~5 MB total quota). Target ≲ 250 KB.
+export async function compressImageToDataUrl(
+  file: File,
+  maxDim = 1024,
+  quality = 0.7
+): Promise<string> {
+  const canvas = await compressToCanvas(file, maxDim);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
+// Real mode: compressed JPEG Blob to upload to Supabase Storage (keeps us well
+// under the 1 GB free-tier cap instead of storing multi-MB originals).
+export async function compressImageToBlob(
+  file: File,
+  maxDim = 1024,
+  quality = 0.7
+): Promise<Blob> {
+  const canvas = await compressToCanvas(file, maxDim);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("could not encode image"))),
+      "image/jpeg",
+      quality
+    );
+  });
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { MASTERTOPIK_URL, type Profile } from "../types";
 import { startOfWeek, toISODate } from "../lib/week";
-import { compressImageToDataUrl, demoInsert, isDemo } from "../lib/demo";
+import { compressImageToBlob, compressImageToDataUrl, demoInsert, isDemo } from "../lib/demo";
 
 export function SubmitForm({ student }: { student: Profile }) {
   const [title, setTitle] = useState("");
@@ -44,10 +44,10 @@ export function SubmitForm({ student }: { student: Profile }) {
         return;
       }
 
-      const ext = file.name.split(".").pop() ?? "png";
-      const path = `${student.id}/${Date.now()}.${ext}`;
-      const up = await supabase.storage.from("screenshots").upload(path, file, {
-        contentType: file.type || "image/png",
+      const blob = await compressImageToBlob(file);
+      const path = `${student.id}/${Date.now()}.jpg`;
+      const up = await supabase.storage.from("screenshots").upload(path, blob, {
+        contentType: "image/jpeg",
         upsert: false,
       });
       if (up.error) throw up.error;
