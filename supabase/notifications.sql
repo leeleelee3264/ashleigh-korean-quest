@@ -54,3 +54,23 @@ select cron.schedule(
   );
   $$
 );
+
+-- ── 3. daily review card cron (23:00 UTC = 08:00 KST) ──────
+-- 어제(KST) 제출한 노트를 Gemini로 복습 카드화해 발송. 어제 제출 없으면 패스.
+select cron.unschedule('discord-review-daily')
+where exists (select 1 from cron.job where jobname = 'discord-review-daily');
+
+select cron.schedule(
+  'discord-review-daily',
+  '0 23 * * *',
+  $$
+  select net.http_post(
+    url := 'https://ivxbpxmwvmjdtqreyizd.supabase.co/functions/v1/discord-review',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-quest-secret', '<QUEST_HOOK_SECRET>'
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
