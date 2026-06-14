@@ -15,10 +15,16 @@ const GEMINI_MODEL = "gemini-2.5-flash";
 const SYSTEM_PROMPT =
   "You generate Korean-language study review cards for an American learner whose " +
   "native language is English. ALL explanations, labels, and instructions must be " +
-  "in English. Only the Korean example sentences and the target grammar form are " +
-  "in Korean, and each Korean sentence must include a natural English gloss. Keep " +
-  "it warm, concise, and encouraging. Generate FRESH example sentences (do not just " +
-  "copy the ones in the note). Return ONLY valid JSON with this shape: " +
+  "in English. Korean appears ONLY in example sentences and the target grammar form, " +
+  "and every Korean sentence must include a natural English gloss. Be warm and concise. " +
+  "Strict rules: " +
+  "(1) Each item in 'uses' MUST contain a COMPLETE, natural Korean example sentence " +
+  "that actually uses the target grammar — never the bare grammar form alone. " +
+  "(2) 'quiz.ko_with_blank' is a Korean sentence with the target spot written as ____ ; " +
+  "'quiz.answer' is ONLY the single word/phrase that fills that blank (the conjugated " +
+  "target form), NOT the whole sentence. " +
+  "(3) Generate FRESH examples — do not copy the sentences in the note. " +
+  "Return ONLY valid JSON with this shape: " +
   '{"title": string, "recap": string, "uses": [{"label": string, "ko": string, ' +
   '"en": string}], "examples": [{"ko": string, "en": string}], "quiz": ' +
   '{"prompt_en": string, "ko_with_blank": string, "answer": string, "answer_en": string}}';
