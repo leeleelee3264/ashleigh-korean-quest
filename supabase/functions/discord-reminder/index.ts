@@ -5,7 +5,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const REMIND_AFTER_DAYS = 3;
+const REMIND_EVERY_DAYS = 3; // 3, 6, 9, … 일째에만 발송 (매일 아님)
 const SITE_URL = "https://leeleelee3264.github.io/ashleigh-korean-quest/";
 const COLOR_PINK = 0xf472b6;
 
@@ -68,11 +68,19 @@ Deno.serve(async (req) => {
     ? (Date.now() - new Date(last).getTime()) / 86_400_000
     : Infinity;
 
-  if (daysSince < REMIND_AFTER_DAYS && !preview) {
+  const days = Number.isFinite(daysSince) ? Math.floor(daysSince) : null;
+
+  // 마지막 제출이 3의 배수(3, 6, 9, …)일째일 때만 발송. 그 외 날은 조용히 패스.
+  // 제출 이력이 아예 없으면(null) 매번 발송. cron이 매일 1회 도므로 경과일수가
+  // 매일 1씩 올라 각 배수에 정확히 한 번씩 걸린다.
+  const isReminderDay =
+    days === null ||
+    (days >= REMIND_EVERY_DAYS && days % REMIND_EVERY_DAYS === 0);
+
+  if (!isReminderDay && !preview) {
     return new Response(`ok: last submission ${daysSince.toFixed(1)}d ago`);
   }
 
-  const days = Number.isFinite(daysSince) ? Math.floor(daysSince) : null;
   const dayLabel =
     days === null ? "a while" : days <= 1 ? "1 day" : `${days} days`;
 

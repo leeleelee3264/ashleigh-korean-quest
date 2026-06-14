@@ -28,7 +28,6 @@ Deno.serve(async (req) => {
   if (type === "INSERT") {
     const submittedAt = record.submitted_at ?? new Date().toISOString();
     payload = {
-      content: "🐱 **New quest submitted!**",
       embeds: [
         {
           author: { name: "🐱 Ashleigh" },
@@ -62,7 +61,6 @@ Deno.serve(async (req) => {
   ) {
     const reviewedAt = record.reviewed_at ?? new Date().toISOString();
     payload = {
-      content: "🐶 **Quest approved!** 도장 쾅! 🎉",
       embeds: [
         {
           author: { name: "🐶 Sungmin" },
