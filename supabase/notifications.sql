@@ -1,6 +1,6 @@
--- Discord notifications: DB trigger (submit/approve) + daily reminder cron
--- Run this in Supabase Dashboard → SQL Editor (after deploying the two
--- edge functions and setting secrets — see README / project notes).
+-- Discord notifications: DB trigger (submit/approve) + daily reminder & review crons
+-- Run this in Supabase Dashboard → SQL Editor (after deploying the edge
+-- functions and setting secrets — see README / project notes).
 --
 -- QUEST_HOOK_SECRET below must match the value set via
 -- `supabase secrets set QUEST_HOOK_SECRET=...`
@@ -57,6 +57,9 @@ select cron.schedule(
 
 -- ── 3. daily review card cron (01:00 UTC = 10:00 KST) ──────
 -- 어제(KST) 제출한 노트를 Gemini로 복습 카드화해 발송. 어제 제출 없으면 패스.
+-- discord-review는 Gemini로 카드를 생성하느라 수 초 걸린다. pg_net 기본 타임아웃
+-- (5초)에 함수가 잘려 카드가 누락되던 문제가 있어(2026-07-16 확인) timeout을 30초로
+-- 올린다. 재시도는 함수 내부(in-place, 429/5xx만)에서만 — cron 재호출 없음(중복 방지).
 select cron.unschedule('discord-review-daily')
 where exists (select 1 from cron.job where jobname = 'discord-review-daily');
 
@@ -70,7 +73,8 @@ select cron.schedule(
       'Content-Type', 'application/json',
       'x-quest-secret', '<QUEST_HOOK_SECRET>'
     ),
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
   );
   $$
 );

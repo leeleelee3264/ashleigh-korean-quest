@@ -1,7 +1,14 @@
-// discord-review: pg_cron이 매일 1회(KST 08:00) 호출하는 복습 카드 함수.
+// discord-review: pg_cron이 매일 1회(KST 10:00 = 01:00 UTC) 호출하는 복습 카드 함수.
 // "어제(KST) 제출한 노트" 중 최신 1건을 Gemini에 넣어 영어 설명 + 한국어 예문
 // 복습 카드를 생성해 디스코드로 발송한다. 어제 제출이 없으면 조용히 패스.
 // ?preview=1 을 붙이면 어제 조건을 무시하고 "노트 있는 최신 제출"로 즉시 발송.
+//
+// 안정성(2026-07-16): Gemini 응답이 느린 날 pg_net 기본 5초 타임아웃에 함수가
+// 잘려 카드가 누락되던 문제 확인. 대응 2종 —
+//   (1) cron의 net.http_post에 timeout_milliseconds := 30000 (함수를 안 끊게)
+//   (2) 아래 in-place 재시도: Gemini/디스코드가 일시 오류(429/5xx)일 때만 같은
+//       실행 안에서 백오프 재시도. 디스코드 전송은 끝에 딱 1번(2xx면 즉시 종료,
+//       네트워크 예외는 재시도 안 함) → 중복 발송 원천 차단.
 // 배포: supabase functions deploy discord-review --no-verify-jwt
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -10,6 +17,15 @@ const SITE_URL = "https://leeleelee3264.github.io/ashleigh-korean-quest/";
 const COLOR_BLUE = 0x60a5fa;
 const KST = 9 * 60 * 60 * 1000;
 const GEMINI_MODEL = "gemini-2.5-flash";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+class GeminiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "GeminiError";
+  }
+}
 
 // 학습자(미국인) 기준: 설명·라벨·지시문은 영어, 한국어는 예문/문법형에만 + 영어 번역.
 const SYSTEM_PROMPT =
@@ -64,12 +80,59 @@ async function generateCard(
     },
   );
   if (!res.ok) {
-    throw new Error(`gemini ${res.status}: ${await res.text()}`);
+    throw new GeminiError(res.status, `gemini ${res.status}: ${await res.text()}`);
   }
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error("gemini returned no text");
   return JSON.parse(text) as Card;
+}
+
+// Gemini 카드 생성 — 일시 오류(429/5xx)·네트워크 예외는 같은 실행 안에서
+// 백오프(1s→2s→4s) 재시도. 400 등 영구 오류는 즉시 포기. 전송 전 단계라 부작용 없음.
+async function generateCardWithRetry(
+  apiKey: string,
+  lessonTitle: string,
+  note: string,
+  attempts = 3,
+): Promise<Card> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await generateCard(apiKey, lessonTitle, note);
+    } catch (e) {
+      lastErr = e;
+      // GeminiError면서 429도 5xx도 아니면(=4xx 영구 오류) 재시도 무의미 → 즉시 포기.
+      const permanent = e instanceof GeminiError && e.status !== 429 &&
+        e.status < 500;
+      if (permanent || i === attempts - 1) throw e;
+      await sleep(1000 * 2 ** i);
+    }
+  }
+  throw lastErr;
+}
+
+// 디스코드 전송 — 받은 응답이 429/5xx일 때만(메시지가 거부된 것이라 재전송해도
+// 중복 없음) 백오프 재시도. 2xx면 즉시 반환. fetch가 던지는 네트워크 예외는
+// "보냈는지 불확실"이라 재시도하지 않는다(중복 방지 > 재전송).
+async function postDiscord(
+  webhook: string,
+  payload: unknown,
+  attempts = 3,
+): Promise<Response> {
+  let res!: Response;
+  for (let i = 0; i < attempts; i++) {
+    res = await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok || !(res.status === 429 || res.status >= 500)) return res;
+    if (i === attempts - 1) return res;
+    const ra = Number(res.headers.get("retry-after"));
+    await sleep(Number.isFinite(ra) && ra > 0 ? ra * 1000 : 1000 * 2 ** i);
+  }
+  return res;
 }
 
 function buildDescription(card: Card): string {
@@ -137,25 +200,22 @@ Deno.serve(async (req) => {
 
   let card: Card;
   try {
-    card = await generateCard(apiKey, row.lesson_title, row.note);
+    card = await generateCardWithRetry(apiKey, row.lesson_title, row.note);
   } catch (e) {
     return new Response(`gemini error: ${e}`, { status: 502 });
   }
 
-  const res = await fetch(webhook, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      embeds: [{
-        author: { name: "🔁 Daily Review" },
-        title: card.title,
-        url: SITE_URL,
-        description: buildDescription(card),
-        color: COLOR_BLUE,
-        footer: { text: "Korean Study Quest • Review is where it sticks" },
-        timestamp: new Date().toISOString(),
-      }],
-    }),
+  // 전송은 딱 한 번(내부에서 429/5xx만 안전 재시도). preview 외에는 한 카드만 나감.
+  const res = await postDiscord(webhook, {
+    embeds: [{
+      author: { name: "🔁 Daily Review" },
+      title: card.title,
+      url: SITE_URL,
+      description: buildDescription(card),
+      color: COLOR_BLUE,
+      footer: { text: "Korean Study Quest • Review is where it sticks" },
+      timestamp: new Date().toISOString(),
+    }],
   });
   if (!res.ok) {
     return new Response(`discord error: ${res.status}`, { status: 502 });
