@@ -9,12 +9,17 @@
 //   (2) 아래 in-place 재시도: Gemini/디스코드가 일시 오류(429/5xx)일 때만 같은
 //       실행 안에서 백오프 재시도. 디스코드 전송은 끝에 딱 1번(2xx면 즉시 종료,
 //       네트워크 예외는 재시도 안 함) → 중복 발송 원천 차단.
+// 가시성(2026-07-19): 재시도까지 다 실패하면 조용히 사라지지 말고 디스코드로
+//   "⚠️ Review Card Failed + 이유" 알림 발송(notifyFailure). 카드 실패는 대개
+//   Gemini 쪽이고 디스코드는 살아있어 알림은 대부분 닿는다. 단 함수가 30s
+//   타임아웃에 통째로 잘리는 경우는 알림도 못 보낸다(한계).
 // 배포: supabase functions deploy discord-review --no-verify-jwt
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SITE_URL = "https://leeleelee3264.github.io/ashleigh-korean-quest/";
 const COLOR_BLUE = 0x60a5fa;
+const COLOR_RED = 0xef4444;
 const KST = 9 * 60 * 60 * 1000;
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -135,6 +140,37 @@ async function postDiscord(
   return res;
 }
 
+// 카드 생성/발송이 끝내 실패하면 조용히 죽지 말고 디스코드로 "실패했다 + 이유"를
+// 알린다(best-effort). 카드 실패는 대개 Gemini 쪽이고 디스코드 발송은 멀쩡하니
+// 이 알림은 대부분 도착한다. 여기서 또 터지면 그냥 삼킨다(무한 루프 방지).
+async function notifyFailure(
+  webhook: string,
+  lessonTitle: string | undefined,
+  reason: string,
+): Promise<void> {
+  try {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        embeds: [{
+          author: { name: "⚠️ Review Card Failed" },
+          title: lessonTitle ? `📓 ${lessonTitle}` : "Daily review card",
+          fields: [{
+            name: "Reason",
+            value: reason.slice(0, 1000),
+          }],
+          color: COLOR_RED,
+          footer: { text: "Korean Study Quest" },
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    });
+  } catch (_) {
+    // 실패 알림마저 실패 — 더 할 수 있는 게 없으므로 무시.
+  }
+}
+
 function buildDescription(card: Card): string {
   const lines: string[] = [card.recap, ""];
   for (const u of card.uses) {
@@ -202,6 +238,8 @@ Deno.serve(async (req) => {
   try {
     card = await generateCardWithRetry(apiKey, row.lesson_title, row.note);
   } catch (e) {
+    // 재시도까지 다 소진 → 조용히 죽지 말고 실패 알림을 쏜다.
+    await notifyFailure(webhook, row.lesson_title, `Gemini failed after retries — ${e}`);
     return new Response(`gemini error: ${e}`, { status: 502 });
   }
 
@@ -218,6 +256,8 @@ Deno.serve(async (req) => {
     }],
   });
   if (!res.ok) {
+    // 카드 발송이 끝내 실패 — 같은 웹훅이 아직 살아있으면 실패 알림이라도 닿는다.
+    await notifyFailure(webhook, row.lesson_title, `Discord rejected the card — HTTP ${res.status}`);
     return new Response(`discord error: ${res.status}`, { status: 502 });
   }
 
